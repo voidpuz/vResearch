@@ -130,3 +130,49 @@ Configure `DJANGO_SETTINGS_MODULE` to declare which settings file to use.
 
 **Using Environment Variables Pattern.** Every operating system supported by Django (and Python) provides the easy capability to create environment variables. PLEASE use them. Everything - API keys, secret keys, credentials, etc - should be stored in environment variables.
 
+1. Setting environment variables locally:
+```bash
+export SOME_SECRET_KEY=1c3-cr3am-15-yummy
+```
+
+2. Unsetting environment variables locally:
+```bash
+unset SOME_SECRET_KEY
+```
+
+**Setting Environment Variables in Production.** In production, we have to use `.env` file with a proper library, such as `django-environ` or `python-dotenv` to automatically manage environment variables. 
+**Handling Missing Key Exceptions.** By default, if we use `python-dotenv` or `django-environ` and do not find a key in the `.env` file, it will raise an exception, but doesn't tell exactly which key is not present. In this case, we can define a simple utility function to make it explicit:
+```python
+# settings/base.py
+import os
+# Normally you should not import ANYTHING from Django directly
+# into your settings, but ImproperlyConfigured is an exception.
+from django.core.exceptions import ImproperlyConfigured
+
+def get_env_variable(var_name):
+    """Get the environment variable or return exception."""
+    try:
+        return os.environ[var_name]
+    except KeyError:
+        error_msg = 'Set the {} environment variable'.format(var_name)
+        raise ImproperlyConfigured(error_msg)
+```
+Then we can use it to get our secret key:
+```python
+SOME_SECRET_KEY = get_env_variable('SOME_SECRET_KEY')
+```
+This will ensure we will be notified about which key is not present exactly with a proper django exception.
+
+
+### Chapter 6: Model Best Practices
+
+**Be Careful With Model Inheritance.** Model inheritance in Django is a tricky subject. Django provides three ways to do model inheritance: _abstract base classes_, _multi-table inheritance_, and _proxy models_. Don't confuse Python's Abstract Base Classes with Django's Abstract models, they are different.
+
+> ❗️ Avoid using **Multi-Table Inheritance** as it is considered bad by general community.
+
+Here are some simple rules of thumb for knowing which type of inheritance to use and when:
+- No Model Inheritance, if the overlap between models is minimal (one or two fields are common). Just add the fields to both models.
+- Abstract Base Classes, If there is enough overlap between models that maintenance of models’ repeated fields cause confusion.
+- Proxy Models, are an occasionally-useful convenience feature, but they’re very different from the other two model inheritance styles. (But I think we should avoid it too).
+- Multi-table Inheritance, AVOID!
+
